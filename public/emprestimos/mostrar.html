@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Empréstimos de Livros</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #555;
+        }
+        .container {
+            width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #2196F3; /* Azul */
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #e3f2fd; /* Azul claro */
+        }
+        button {
+            padding: 10px;
+            background-color: #2196F3; /* Azul */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #1976D2; /* Azul mais escuro */
+        }
+        #mensagem, #mensagemBusca, #mensagemFiltro {
+            margin-top: 20px;
+            color: red; /* Cor de erro */
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Gerenciamento de Empréstimos de Livros</h1>
+
+    <div class="container">
+        <h2>Filtrar por Status</h2>
+        <button id="filterPending">Pendente</button>
+        <button id="filterReturned">Devolvido</button>
+        <button id="filterOverdue">Atrasado</button>
+        <div id="mensagemFiltro" aria-live="polite"></div>
+    </div>
+
+    <div class="container">
+        <h2>Todos os Empréstimos de Livros</h2>
+        <table id="emprestimosTable">
+            <thead>
+                <tr>
+                    <th>Aluno</th>
+                    <th>Turma</th>
+                    <th>Livro Emprestado</th>
+                    <th>Data de Empréstimo</th>
+                    <th>Data de Devolução</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Os dados dos empréstimos serão inseridos aqui -->
+            </tbody>
+        </table>
+        <div id="mensagemTable" aria-live="polite"></div>
+    </div>
+
+    <script>
+        const fetchEmprestimos = async () => {
+            const emprestimosTableBody = document.getElementById('emprestimosTable').getElementsByTagName('tbody')[0];
+            document.getElementById('mensagemTable').innerText = 'Carregando...';
+
+            try {
+                const response = await fetch('/emprestimo');
+                if (response.ok) {
+                    const emprestimos = await response.json();
+                    populateTable(emprestimos);
+                } else if (response.status === 404) {
+                    document.getElementById('mensagemTable').innerText = 'Empréstimos não encontrados.';
+                } else {
+                    document.getElementById('mensagemTable').innerText = 'Erro ao buscar os empréstimos.';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('mensagemTable').innerText = 'Erro de conexão.';
+            }
+        };
+
+        const populateTable = (emprestimos) => {
+            const emprestimosTableBody = document.getElementById('emprestimosTable').getElementsByTagName('tbody')[0];
+            emprestimosTableBody.innerHTML = '';
+
+            emprestimos.forEach(emprestimo => {
+                const row = emprestimosTableBody.insertRow();
+                row.insertCell(0).innerText = emprestimo.aluno;
+                row.insertCell(1).innerText = emprestimo.turma;
+                row.insertCell(2).innerText = emprestimo.Livro_emprestado;
+                row.insertCell(3).innerText = emprestimo.Data_emprestado;
+                row.insertCell(4).innerText = emprestimo.Data_devolucao;
+                row.insertCell(5).innerText = emprestimo.status;
+            });
+
+            if (emprestimos.length === 0) {
+                document.getElementById('mensagemTable').innerText = 'Nenhum empréstimo encontrado.';
+            } else {
+                document.getElementById('mensagemTable').innerText = '';
+            }
+        };
+
+        const filterEmprestimos = async (status) => {
+            const emprestimosTableBody = document.getElementById('emprestimosTable').getElementsByTagName('tbody')[0];
+            document.getElementById('mensagemFiltro').innerText = 'Carregando...';
+
+            try {
+                const response = await fetch(`/emprestimo?status=${status}`);
+                if (response.ok) {
+                    const emprestimos = await response.json();
+                    populateTable(emprestimos);
+                    
+                    if (emprestimos.length === 0) {
+                        document.getElementById('mensagemFiltro').innerText = 'Nenhum empréstimo encontrado para o status selecionado.';
+                    } else {
+                        document.getElementById('mensagemFiltro').innerText = '';
+                    }
+                } else {
+                    document.getElementById('mensagemFiltro').innerText = 'Erro ao buscar os empréstimos.';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('mensagemFiltro').innerText = 'Erro de conexão.';
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('filterPending').addEventListener('click', () => filterEmprestimos('Pendente'));
+            document.getElementById('filterReturned').addEventListener('click', () => filterEmprestimos('Devolvido'));
+            document.getElementById('filterOverdue').addEventListener('click', () => filterEmprestimos('Atrasado'));
+
+            // Chama a função para buscar os empréstimos ao carregar a página
+            fetchEmprestimos();
+        });
+    </script>
+
+</body>
+</html>

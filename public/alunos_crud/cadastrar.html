@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Aluno</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e8f4fa; /* Azul claro */
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        h1 {
+            color: #004d80; /* Azul escuro */
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007acc; /* Azul médio */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #005f99; /* Azul mais escuro */
+        }
+        #mensagem {
+            margin-top: 20px;
+            color: green; /* Cor de sucesso */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Cadastro de Aluno</h1>
+        <form id="formCadastro">
+            <label for="nomeAluno">Nome do Aluno</label>
+            <input type="text" id="nomeAluno" name="nomeAluno" required placeholder="Digite o nome do aluno">
+            <button type="button" onclick="cadastrarAluno()">Cadastrar</button>
+        </form>
+        <div id="mensagem" aria-live="polite"></div>
+    </div>
+
+    <script>
+        async function cadastrarAluno() {
+            const nomeAluno = document.getElementById('nomeAluno').value;
+            const mensagem = document.getElementById('mensagem');
+
+            if (!nomeAluno.trim()) {
+                mensagem.textContent = 'Por favor, insira o nome do aluno.';
+                mensagem.style.color = 'red';
+                return;
+            }
+
+            try {
+                const response = await fetch('/alunos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ aluno: nomeAluno })
+                });
+
+                if (response.ok) {
+                    mensagem.textContent = 'Aluno cadastrado com sucesso!';
+                    mensagem.style.color = 'green';
+                    document.getElementById('formCadastro').reset();
+                } else {
+                    mensagem.textContent = 'Erro ao cadastrar o aluno.';
+                    mensagem.style.color = 'red';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mensagem.textContent = 'Erro de conexão.';
+                mensagem.style.color = 'red';
+            }
+        }
+    </script>
+
+</body>
+</html>

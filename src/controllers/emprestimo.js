@@ -1,4 +1,5 @@
 import Emprestimo from "../models/emprestimo.js";
+import Aluno from "../models/aluno.js";
 
 const calcularStatus = (emprestimo) => {
     const hoje = new Date();
@@ -15,6 +16,7 @@ const calcularStatus = (emprestimo) => {
 
 const store = async (req,res)=>{
     try{
+    console.log(req.body)
     const connect = await Emprestimo.create(req.body)
     res.status(201).json(connect)
     }catch(err){
@@ -22,19 +24,36 @@ const store = async (req,res)=>{
     }
 }
 
-const index = async (req,res)=>{
-    try{
-        const emprestimos = await Emprestimo.find();
+const index = async (req, res) => {
+    console.log('Parâmetros da consulta:');
+
+    try {
+        const status = req.query.status || ''; // Obtém o parâmetro de status, se existir
+        console.log(status)
+
+        let query = {}; // Inicializa a consulta como um objeto vazio
+        // Adiciona condição à consulta se o parâmetro de status estiver presente
+        if (status) {
+            query.status = status; // Filtra pelo status
+        }
+
+        // Executa a consulta com base nas condições acima
+        const emprestimos = await Emprestimo.find(query);
+
+        // Adiciona o status calculado a cada empréstimo retornado
         const emprestimosComStatus = emprestimos.map(emprestimo => ({
             ...emprestimo.toObject(),
             status: calcularStatus(emprestimo)
         }));
+
+        // Retorna os empréstimos com status
         res.status(200).json(emprestimosComStatus);
-        
-    }catch(err){
+    } catch (err) {
         console.log(err);
+        res.status(500).json({ error: 'Erro ao buscar empréstimos' }); // Retorna um erro se a consulta falhar
     }
-}
+};
+
 
 const show = async (req,res)=>{
     try{
@@ -44,24 +63,7 @@ const show = async (req,res)=>{
         console.log(err);
     }
 }
-const getEmprestimoByAluno = async (req, res) => {
-    try {
-      const aluno = await Emprestimo.find({"aluno":req.params.aluno}).exec()
-      res.status(200).json(aluno);
-    } catch (error) {
-      res.status(404).json({ error: 'Aluno não encontrado' });
-    }
-};
   
-const getEmprestimoByLivro= async (req, res) => {
-    try {
-      const Livro = await Emprestimo.find({"Livro":req.params.Livro_emprestado} )
-      res.status(200).json(Livro);
-    } catch (error) {
-      res.status(404).json({ error: 'Livro não encontrado' });
-    }
-};
-
 const update = async (req,res)=>{
     try{
         const connect = await Emprestimo.findByIdAndUpdate(req.params.id, req.body, {new: true})
@@ -80,4 +82,4 @@ const destroy = async (req,res)=>{
     }
 }
 
-export default {store, index, show, update, destroy, getEmprestimoByAluno, getEmprestimoByLivro}
+export default {store, index, show, update, destroy}

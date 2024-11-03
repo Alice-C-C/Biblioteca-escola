@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Alunos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e8f4fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #004d80;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #007acc;
+            color: white;
+        }
+        button {
+            padding: 8px;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 20px; /* Adiciona espaçamento entre os botões */
+        }
+        button:last-child {
+        margin-right: 0; /* Remove a margem direita do último botão na célula */
+        }
+        button:hover {
+            background-color: #005f99;
+        }
+        .inputUpdate {
+            width: 100%;
+            padding: 5px;
+        }
+        #mensagem {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Gerenciamento de Alunos</h1>
+        <table id="alunosTable">
+            <thead>
+                <tr>
+                    <th>Nome do Aluno</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dados dos alunos serão inseridos aqui -->
+            </tbody>
+        </table>
+        <div id="mensagem" aria-live="polite"></div>
+    </div>
+
+    <script>
+        async function fetchAlunos() {
+            try {
+                const response = await fetch('/alunos');
+                if (response.ok) {
+                    const alunos = await response.json();
+                    populateTable(alunos);
+                } else {
+                    document.getElementById('mensagem').innerText = 'Erro ao buscar os alunos.';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('mensagem').innerText = 'Erro de conexão.';
+            }
+        }
+
+        function populateTable(alunos) {
+            const alunosTableBody = document.getElementById('alunosTable').getElementsByTagName('tbody')[0];
+            alunosTableBody.innerHTML = ''; // Limpa a tabela antes de adicionar novos dados
+
+            alunos.forEach(aluno => {
+                const row = alunosTableBody.insertRow();
+                row.id = `row-${aluno._id}`;
+
+                const nomeCell = row.insertCell(0);
+                nomeCell.innerText = aluno.aluno;
+                nomeCell.id = `nome-cell-${aluno._id}`;
+
+                const actionsCell = row.insertCell(1);
+
+                // Botão de deletar
+                const btnDeletar = document.createElement('button');
+                btnDeletar.innerText = 'Deletar';
+                btnDeletar.onclick = () => deletarAluno(aluno._id);
+                actionsCell.appendChild(btnDeletar);
+
+                // Botão de atualizar
+                const btnAtualizar = document.createElement('button');
+                btnAtualizar.innerText = 'Atualizar';
+                btnAtualizar.onclick = () => editAlunoNome(aluno._id, aluno.aluno);
+                actionsCell.appendChild(btnAtualizar);
+            });
+        }
+
+        function editAlunoNome(id, nomeAtual) {
+            const nomeCell = document.getElementById(`nome-cell-${id}`);
+
+            // Cria um campo de entrada para editar o nome do aluno
+            nomeCell.innerHTML = `<input type="text" id="input-update-${id}" class="inputUpdate" value="${nomeAtual}">`;
+
+            // Substitui o botão de atualizar por um botão de salvar
+            const actionsCell = document.getElementById(`row-${id}`).cells[1];
+            actionsCell.innerHTML = '';
+
+            const btnSalvar = document.createElement('button');
+            btnSalvar.innerText = 'Salvar';
+            btnSalvar.onclick = () => atualizarAluno(id);
+            actionsCell.appendChild(btnSalvar);
+
+            const btnCancelar = document.createElement('button');
+            btnCancelar.innerText = 'Cancelar';
+            btnCancelar.onclick = () => fetchAlunos();
+            actionsCell.appendChild(btnCancelar);
+        }
+
+        async function atualizarAluno(id) {
+            const novoNome = document.getElementById(`input-update-${id}`).value.trim();
+
+            if (!novoNome) {
+                document.getElementById('mensagem').innerText = 'O nome não pode estar vazio.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/alunos/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ aluno: novoNome })
+                });
+
+                if (response.ok) {
+                    document.getElementById('mensagem').innerText = 'Aluno atualizado com sucesso!';
+                    fetchAlunos(); // Atualiza a lista de alunos
+                } else {
+                    document.getElementById('mensagem').innerText = 'Erro ao atualizar o aluno.';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('mensagem').innerText = 'Erro de conexão.';
+            }
+        }
+
+        async function deletarAluno(id) {
+            const confirmar = confirm("Você realmente deseja deletar este aluno?");
+            if (!confirmar) return;
+
+            try {
+                const response = await fetch(`/alunos/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    document.getElementById('mensagem').innerText = 'Aluno deletado com sucesso!';
+                    fetchAlunos(); // Atualiza a lista de alunos
+                } else {
+                    document.getElementById('mensagem').innerText = 'Erro ao deletar o aluno.';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('mensagem').innerText = 'Erro de conexão.';
+            }
+        }
+
+        // Carrega a lista de alunos ao iniciar a página
+        document.addEventListener('DOMContentLoaded', fetchAlunos);
+    </script>
+</body>
+</html>

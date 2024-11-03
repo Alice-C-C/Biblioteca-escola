@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Empréstimo de Livro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f3; /* Cor de fundo mais suave */
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 400px;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px; /* Bordas arredondadas */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative; /* Permite que a lista autocomplete se posicione corretamente */
+        }
+        .header {
+            padding: 15px;
+            background-color: #4a90e2; /* Cor de fundo do cabeçalho */
+            color: #ffffff; /* Cor do texto do cabeçalho */
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 8px 8px 0 0;
+        }
+        h1 {
+            font-size: 1.5em;
+            color: #4a4a6a; /* Cor do texto do título */
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #5a92f0; /* Cor do botão */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #4a80d1; /* Cor ao passar o mouse */
+        }
+        #mensagem {
+            margin-top: 10px;
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        .autocomplete-list {
+            position: absolute;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            max-height: 150px; /* Altura máxima da lista */
+            overflow-y: auto; /* Permite rolagem vertical */
+            width: calc(100% - 20px);
+            z-index: 1000;
+            margin-top: -10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: none; /* Inicialmente escondido */
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #ddd;
+        }
+        .autocomplete-item:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Biblioteca Escolar</div>
+        <h1>Cadastrar Empréstimo de Livro</h1>
+        <form id="emprestimoForm">
+            <div style="position: relative;">
+                <input type="text" id="aluno" placeholder="Nome do Aluno" autocomplete="off" required aria-label="Nome do Aluno">
+                <div id="autocomplete-list" class="autocomplete-list" style="display: none;"></div>
+            </div>
+            <input type="text" id="turma" placeholder="Turma" required aria-label="Turma">
+            <input type="text" id="livro" placeholder="Título do Livro Emprestado" required aria-label="Título do Livro">
+            <input type="date" id="dataEmprestado" placeholder="Data de Empréstimo" required aria-label="Data de Empréstimo">
+            <input type="date" id="dataDevolucao" placeholder="Data de Devolução" required aria-label="Data de Devolução">
+            <button type="submit">Cadastrar</button>
+        </form>
+        <div id="mensagem" aria-live="polite"></div>
+    </div>
+
+    <script>
+        // Função para buscar todos os alunos
+        async function buscarTodosAlunos() {
+            try {
+                const response = await fetch('/alunos');
+                if (response.ok) {
+                    const alunos = await response.json();
+                    const autocompleteList = document.getElementById('autocomplete-list');
+                    autocompleteList.innerHTML = ''; 
+                    alunos.forEach(aluno => {
+                        const item = document.createElement('div');
+                        item.classList.add('autocomplete-item');
+                        item.textContent = aluno.aluno;
+
+                        item.onclick = () => {
+                            document.getElementById('aluno').value = aluno.aluno;
+                            autocompleteList.style.display = 'none';
+                        };
+
+                        autocompleteList.appendChild(item);
+                    });
+                    autocompleteList.style.display = 'block'; 
+                } else {
+                    console.error('Erro ao buscar alunos');
+                }
+            } catch (error) {
+                console.error('Erro de conexão:', error);
+            }
+        }
+        
+        document.getElementById('aluno').addEventListener('focus', buscarTodosAlunos);
+
+        // Função para buscar alunos conforme o usuário digita
+        document.getElementById('aluno').addEventListener('input', async (e) => {
+            const query = e.target.value;
+            if (query.length < 2) {
+                document.getElementById('autocomplete-list').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/alunos/buscar?aluno=${query}`);
+                if (response.ok) {
+                    const alunos = await response.json();
+                    const autocompleteList = document.getElementById('autocomplete-list');
+                    autocompleteList.innerHTML = ''; // Limpa a lista de sugestões
+
+                    if (alunos.length > 0) { // Verifica se há alunos retornados
+                        alunos.forEach(aluno => {
+                            const item = document.createElement('div');
+                            item.classList.add('autocomplete-item');
+                            item.textContent = aluno.aluno;
+
+                            item.onclick = () => {
+                                document.getElementById('aluno').value = aluno.aluno;
+                                autocompleteList.style.display = 'none';
+                            };
+
+                            autocompleteList.appendChild(item);
+                        });
+                        autocompleteList.style.display = 'block'; // Mostra a lista apenas se houver sugestões
+                    } else {
+                        autocompleteList.style.display = 'none'; // Esconde se não houver sugestões
+                    }
+                } else {
+                    console.error('Erro ao buscar alunos');
+                }
+            } catch (error) {
+                console.error('Erro de conexão:', error);
+            }
+        });
+
+        // Função para ocultar a lista de sugestões ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#aluno')) {
+                document.getElementById('autocomplete-list').style.display = 'none';
+            }
+        });
+
+        // Função para definir a data atual e a data de devolução padrão
+        const hoje = new Date();
+        if (!isNaN(hoje.getTime())) { // Verifica se a data é válida
+            var dataFormatada = hoje.toISOString().split('T')[0];
+            document.getElementById('dataEmprestado').value = dataFormatada;
+            var dataDevolucao = new Date(hoje);
+            dataDevolucao.setDate(dataDevolucao.getDate() + 15);
+            if (!isNaN(dataDevolucao.getTime())) { // Verifica se a data de devolução é válida
+                document.getElementById('dataDevolucao').value = dataDevolucao.toISOString().split('T')[0];
+            }
+        }
+
+        // Submissão do formulário
+        document.getElementById('emprestimoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            var aluno = document.getElementById('aluno').value;
+            var turma = document.getElementById('turma').value;
+            var Livro_emprestado = document.getElementById('livro').value;
+            var dataEmprestado = document.getElementById('dataEmprestado').value;
+            var dataDevolucao = document.getElementById('dataDevolucao').value;
+
+            try {
+                const response = await fetch('/emprestimo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aluno, turma, Livro_emprestado, dataEmprestado, dataDevolucao })
+                });
+                const mensagemElement = document.getElementById('mensagem');
+                if (response.ok) {
+                    mensagemElement.textContent = 'Empréstimo cadastrado com sucesso!';
+                    mensagemElement.className = 'success';
+                    document.getElementById('emprestimoForm').reset();
+                    document.getElementById('autocomplete-list').style.display = 'none'; // Esconde a lista após o envio
+                } else {
+                    mensagemElement.textContent = 'Erro ao cadastrar o empréstimo.';
+                    mensagemElement.className = '';
+                }
+            } catch (error) {
+                console.error('Erro de conexão:', error);
+                document.getElementById('mensagem').textContent = 'Erro de conexão.';
+            }
+        });
+    </script>
+</body>
+</html>
