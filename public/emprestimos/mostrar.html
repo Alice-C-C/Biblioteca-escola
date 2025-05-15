@@ -117,9 +117,6 @@
             }
         };
 
-        const emprestimos = await response.json();
-         console.log('Dados recebidos do backend:', emprestimos);
-        populateTable(emprestimos);
         const populateTable = (emprestimos) => {
             const emprestimosTableBody = document.getElementById('emprestimosTable').getElementsByTagName('tbody')[0];
             emprestimosTableBody.innerHTML = '';
