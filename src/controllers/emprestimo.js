@@ -1,14 +1,24 @@
 import Emprestimo from "../models/emprestimo.js";
 import Aluno from "../models/aluno.js";
 
-const calcularStatus = (emprestimo) => {
+const calcularStatus = async (emprestimo) => {
     const hoje = new Date();
-    
+
     if (emprestimo.status === 'Devolvido') {
         return 'Devolvido';
     } else if (hoje > emprestimo.Data_devolucao) {
+        // Atualiza o status no banco para "Atrasado" se ainda não estiver assim
+        if (emprestimo.status !== 'Atrasado') {
+            emprestimo.status = 'Atrasado';
+            await emprestimo.save();
+        }
         return 'Atrasado';
     } else {
+        // Se ainda não for Pendente, atualiza
+        if (emprestimo.status !== 'Pendente') {
+            emprestimo.status = 'Pendente';
+            await emprestimo.save();
+        }
         return 'Pendente';
     }
 };
@@ -26,7 +36,8 @@ const store = async (req,res)=>{
 
 const index = async (req, res) => {
     try {
-        const status = req.query.status || '';
+        const status = req.query.status || ''; // filtro por status, se existir
+
         let query = {};
         if (status) {
             query.status = status;
@@ -34,26 +45,23 @@ const index = async (req, res) => {
 
         const emprestimos = await Emprestimo.find(query);
 
-        const emprestimosAtualizados = await Promise.all(
-            emprestimos.map(async (emprestimo) => {
-                const novoStatus = calcularStatus(emprestimo);
+        const emprestimosComStatus = [];
 
-                if (emprestimo.status !== novoStatus) {
-                    emprestimo.status = novoStatus;
-                    await emprestimo.save(); // salva no banco
-                }
+        // Atualiza status de cada empréstimo se necessário
+        for (const emprestimo of emprestimos) {
+            const statusAtualizado = await calcularStatus(emprestimo);
+            emprestimosComStatus.push({
+                ...emprestimo.toObject(),
+                status: statusAtualizado
+            });
+        }
 
-                return emprestimo.toObject(); // retorna com novo status
-            })
-        );
-
-        res.status(200).json(emprestimosAtualizados);
+        res.status(200).json(emprestimosComStatus);
     } catch (err) {
         console.log(err);
         res.status(500).json({ error: 'Erro ao buscar empréstimos' });
     }
 };
-
 
 const show = async (req,res)=>{
     try{
