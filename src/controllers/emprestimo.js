@@ -129,4 +129,4 @@ const destroy = async (req, res) => {
   }
 };
 
-export default { store, index, show, update, destroy };
+export default { store, index, update, destroy };
