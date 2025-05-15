@@ -25,32 +25,32 @@ const store = async (req,res)=>{
 }
 
 const index = async (req, res) => {
-    console.log('Parâmetros da consulta:');
-
     try {
-        const status = req.query.status || ''; // Obtém o parâmetro de status, se existir
-        console.log(status)
-
-        let query = {}; // Inicializa a consulta como um objeto vazio
-        // Adiciona condição à consulta se o parâmetro de status estiver presente
+        const status = req.query.status || '';
+        let query = {};
         if (status) {
-            query.status = status; // Filtra pelo status
+            query.status = status;
         }
 
-        // Executa a consulta com base nas condições acima
         const emprestimos = await Emprestimo.find(query);
 
-        // Adiciona o status calculado a cada empréstimo retornado
-        const emprestimosComStatus = emprestimos.map(emprestimo => ({
-            ...emprestimo.toObject(),
-            status: calcularStatus(emprestimo)
-        }));
+        const emprestimosAtualizados = await Promise.all(
+            emprestimos.map(async (emprestimo) => {
+                const novoStatus = calcularStatus(emprestimo);
 
-        // Retorna os empréstimos com status
-        res.status(200).json(emprestimosComStatus);
+                if (emprestimo.status !== novoStatus) {
+                    emprestimo.status = novoStatus;
+                    await emprestimo.save(); // salva no banco
+                }
+
+                return emprestimo.toObject(); // retorna com novo status
+            })
+        );
+
+        res.status(200).json(emprestimosAtualizados);
     } catch (err) {
         console.log(err);
-        res.status(500).json({ error: 'Erro ao buscar empréstimos' }); // Retorna um erro se a consulta falhar
+        res.status(500).json({ error: 'Erro ao buscar empréstimos' });
     }
 };
 
