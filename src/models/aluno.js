@@ -1,6 +1,6 @@
-import db from "../config/db.js";
+import mongoose from 'mongoose';
+const { Schema } = mongoose;
 
-const Schema = db.Schema;
 
 const AlunoSchema = new Schema({
     aluno: {
@@ -10,5 +10,5 @@ const AlunoSchema = new Schema({
 
 })
 
-const Aluno = db.model("Aluno", AlunoSchema);
+const Aluno = mongoose.model("Aluno", AlunoSchema);
 export default Aluno

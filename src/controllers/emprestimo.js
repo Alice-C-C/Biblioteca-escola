@@ -3,38 +3,49 @@ import Aluno from "../models/aluno.js";
 
 const calcularStatus = async (emprestimo) => {
     const hoje = new Date();
-
+    hoje.setHours(0, 0, 0, 0);
+  
     if (emprestimo.status === 'Devolvido') {
-        return 'Devolvido';
-    } else if (hoje > emprestimo.Data_devolucao) {
-        // Atualiza o status no banco para "Atrasado" se ainda não estiver assim
-        if (emprestimo.status !== 'Atrasado') {
-            emprestimo.status = 'Atrasado';
-            await emprestimo.save();
-        }
-        return 'Atrasado';
-    } else {
-        // Se ainda não for Pendente, atualiza
-        if (emprestimo.status !== 'Pendente') {
-            emprestimo.status = 'Pendente';
-            await emprestimo.save();
-        }
-        return 'Pendente';
+      return 'Devolvido';
     }
-};
-
-
-const store = async (req,res)=>{
-    try{
-    console.log(req.body)
-    const connect = await Emprestimo.create(req.body)
-    res.status(201).json(connect)
-    }catch(err){
-        console.log(err);
+  
+    const dataDevolucao = new Date(emprestimo.Data_devolucao);
+    dataDevolucao.setHours(0, 0, 0, 0);
+  
+    const novoStatus = dataDevolucao < hoje ? 'Atrasado' : 'Pendente';
+  
+    if (emprestimo.status !== novoStatus) {
+      emprestimo.status = novoStatus;
+      await emprestimo.save();
     }
-}
-
-function formatarData(data) {
+  
+    return novoStatus;
+  };
+  
+  // Atualiza status de todos os empréstimos pendentes/atrasados
+  const atualizarTodosStatus = async () => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+  
+    const emprestimos = await Emprestimo.find({ status: { $ne: 'Devolvido' } });
+  
+    for (const emprestimo of emprestimos) {
+      const dataDevolucao = new Date(emprestimo.Data_devolucao);
+      dataDevolucao.setHours(0, 0, 0, 0);
+      console.log(`Emprestimo ID: ${emprestimo._id}`);
+      console.log(`Status atual: ${emprestimo.status}`);
+      console.log(`Data de devolução: ${dataDevolucao}`);
+  
+      const novoStatus = dataDevolucao < hoje ? 'Atrasado' : 'Pendente';
+  
+      if (emprestimo.status !== novoStatus) {
+        emprestimo.status = novoStatus;
+        await emprestimo.save();
+      }
+    }
+  };
+  
+  function formatarData(data) {
     if (!data) return '';
     return new Date(data).toLocaleDateString('pt-BR', {
       weekday: 'long',
@@ -44,60 +55,78 @@ function formatarData(data) {
     });
   }
   
+  // Listar empréstimos com filtro de status (após atualizar status)
   const index = async (req, res) => {
     try {
-      const statusFiltro = req.query.status || ''; // filtro opcional por status
+      console.log('Atualizando status...');
+      await atualizarTodosStatus();
+      console.log('Status atualizados.');
   
-      // Monta query conforme filtro
-      const query = statusFiltro ? { status: statusFiltro } : {};
+      const emprestimos = await Emprestimo.find();
+      console.log('Empréstimos após atualização:', emprestimos.map(e => ({id: e._id, status: e.status})));
   
-      const emprestimos = await Emprestimo.find(query);
+      const statusFiltro = req.query.status || '';
   
-      // Mapeia os empréstimos, atualiza status na resposta e formata datas
-      const emprestimosFormatados = emprestimos.map(emprestimo => {
-        const statusAtualizado = calcularStatus(emprestimo);
+      const emprestimosFiltrados = statusFiltro
+        ? emprestimos.filter(e => e.status === statusFiltro)
+        : emprestimos;
   
-        return {
-          ...emprestimo.toObject(),
-          Data_emprestado: formatarData(emprestimo.Data_emprestado),
-          Data_devolucao: formatarData(emprestimo.Data_devolucao),
-          status: statusAtualizado
-        };
-      });
+      const emprestimosFormatados = emprestimosFiltrados.map(emprestimo => ({
+        ...emprestimo.toObject(),
+        Data_emprestado: formatarData(emprestimo.Data_emprestado),
+        Data_devolucao: formatarData(emprestimo.Data_devolucao),
+        status: String(emprestimo.status),
+      }));
   
       res.status(200).json(emprestimosFormatados);
     } catch (err) {
-      console.error('Erro ao buscar empréstimos:', err);
-      res.status(500).json({ error: 'Erro ao buscar empréstimos' });
+      console.error('Erro ao buscar empréstimos:', err.message);
+      res.status(500).json({ error: 'Erro ao buscar os empréstimos.', details: err.message });
     }
   };
-
-const show = async (req,res)=>{
-    try{
-        const connect = await Emprestimo.findById(req.params.id)
-        res.status(200).json(connect)
-    }catch(err){
-        console.log(err);
-    }
-}
   
-const update = async (req,res)=>{
-    try{
-        const connect = await Emprestimo.findByIdAndUpdate(req.params.id, req.body, {new: true})
-        res.status(200).json(connect)
-    }catch(err){
-        console.log(err);
+// Cadastrar um novo empréstimo
+const store = async (req, res) => {
+  try {
+    const novoEmprestimo = await Emprestimo.create(req.body);
+    res.status(201).json({ message: "Empréstimo registrado com sucesso", data: novoEmprestimo });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao registrar empréstimo.' });
+  }
+};
+
+
+// Atualizar um empréstimo
+const update = async (req, res) => {
+  try {
+    const emprestimoAtualizado = await Emprestimo.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!emprestimoAtualizado) {
+      return res.status(404).json({ error: 'Empréstimo não encontrado para atualizar' });
     }
-}
+    res.status(200).json({ message: "Atualizado com sucesso", data: emprestimoAtualizado });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao atualizar empréstimo.' });
+  }
+};
 
-const destroy = async (req,res)=>{
-    try{
-        const connect = await Emprestimo.findByIdAndDelete(req.params.id)
-        res.status(200).json(connect)
-    }catch(err){
-        console.log(err);
+// Deletar um empréstimo
+const destroy = async (req, res) => {
+  try {
+    const emprestimoDeletado = await Emprestimo.findByIdAndDelete(req.params.id);
+    if (!emprestimoDeletado) {
+      return res.status(404).json({ error: 'Empréstimo não encontrado para deletar' });
     }
-}
+    res.status(200).json({ message: "Deletado com sucesso", data: emprestimoDeletado });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao deletar empréstimo.' });
+  }
+};
 
-
-export default {store, index, show, update, destroy}
+export default { store, index, show, update, destroy };

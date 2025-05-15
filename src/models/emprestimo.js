@@ -1,6 +1,5 @@
-import db from "../config/db.js";
-
-const Schema = db.Schema;
+import mongoose from 'mongoose';
+const { Schema } = mongoose;
 
 const emprestimoSchema = new Schema({
     aluno: {
@@ -31,5 +30,5 @@ const emprestimoSchema = new Schema({
 
 })
 
-const Emprestimo = db.model("Emprestimo", emprestimoSchema);
+const Emprestimo = mongoose.model("Emprestimo", emprestimoSchema);
 export default Emprestimo
