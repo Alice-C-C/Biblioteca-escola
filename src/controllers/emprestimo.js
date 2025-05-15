@@ -96,6 +96,27 @@ const store = async (req, res) => {
   }
 };
 
+// Buscar um empréstimo por ID
+const show = async (req, res) => {
+  try {
+    const emprestimo = await Emprestimo.findById(req.params.id);
+    if (!emprestimo) {
+      return res.status(404).json({ error: 'Empréstimo não encontrado' });
+    }
+
+    const statusAtualizado = await calcularStatus(emprestimo);
+
+    res.status(200).json({
+      ...emprestimo.toObject(),
+      Data_emprestado: formatarData(emprestimo.Data_emprestado),
+      Data_devolucao: formatarData(emprestimo.Data_devolucao),
+      status: String(emprestimo.statusAtualizado),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao buscar empréstimo.' });
+  }
+};
 
 // Atualizar um empréstimo
 const update = async (req, res) => {
@@ -129,4 +150,4 @@ const destroy = async (req, res) => {
   }
 };
 
-export default { store, index, update, destroy };
+export default { store, index, show, update, destroy };
