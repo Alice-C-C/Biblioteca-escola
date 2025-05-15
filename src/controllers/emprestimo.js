@@ -34,34 +34,43 @@ const store = async (req,res)=>{
     }
 }
 
-const index = async (req, res) => {
+function formatarData(data) {
+    if (!data) return '';
+    return new Date(data).toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+  
+  const index = async (req, res) => {
     try {
-        const status = req.query.status || ''; // filtro por status, se existir
-
-        let query = {};
-        if (status) {
-            query.status = status;
-        }
-
-        const emprestimos = await Emprestimo.find(query);
-
-        const emprestimosComStatus = [];
-
-        // Atualiza status de cada empréstimo se necessário
-        for (const emprestimo of emprestimos) {
-            const statusAtualizado = await calcularStatus(emprestimo);
-            emprestimosComStatus.push({
-                ...emprestimo.toObject(),
-                status: statusAtualizado
-            });
-        }
-
-        res.status(200).json(emprestimosComStatus);
+      const statusFiltro = req.query.status || ''; // filtro opcional por status
+  
+      // Monta query conforme filtro
+      const query = statusFiltro ? { status: statusFiltro } : {};
+  
+      const emprestimos = await Emprestimo.find(query);
+  
+      // Mapeia os empréstimos, atualiza status na resposta e formata datas
+      const emprestimosFormatados = emprestimos.map(emprestimo => {
+        const statusAtualizado = calcularStatus(emprestimo);
+  
+        return {
+          ...emprestimo.toObject(),
+          Data_emprestado: formatarData(emprestimo.Data_emprestado),
+          Data_devolucao: formatarData(emprestimo.Data_devolucao),
+          status: statusAtualizado
+        };
+      });
+  
+      res.status(200).json(emprestimosFormatados);
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ error: 'Erro ao buscar empréstimos' });
+      console.error('Erro ao buscar empréstimos:', err);
+      res.status(500).json({ error: 'Erro ao buscar empréstimos' });
     }
-};
+  };
 
 const show = async (req,res)=>{
     try{
@@ -89,5 +98,6 @@ const destroy = async (req,res)=>{
         console.log(err);
     }
 }
+
 
 export default {store, index, show, update, destroy}
