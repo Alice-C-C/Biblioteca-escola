@@ -16,11 +16,11 @@ const emprestimoSchema = new Schema({
         required: true
     },
     Data_emprestado:{
-        type: String,
+        type: Date,
         required:false
     },
     Data_devolucao:{
-        type: String,
+        type: Date,
         required: false
     },
     status: {
